@@ -20,20 +20,23 @@ typedef struct _RadiotapHeader {
 } RadiotapHeader;
 
 
-struct _Dot11FrameControl {
+typedef struct _Dot11FrameControl {
 	union {
 		struct {
 			uint8_t version: 2;
 			uint8_t type: 2;
 			uint8_t subtype: 4;
 		};
-		uint8_t type_subtype;
 	};
 	uint8_t flags;
-};
+
+	inline uint8_t getTypeSubtype() {
+		return (this->version << 6) + (this->type << 4) + this->subtype;
+	}
+} Dot11FrameControl;
 
 typedef struct _Dot11Frame {
-	struct _Dot11FrameControl fc;
+	Dot11FrameControl fc;
 	uint16_t duration;
 	uint8_t receiver_addr[packet::Len::MAC_ADDR];
 } Dot11Frame;
@@ -63,9 +66,9 @@ typedef struct _Dot11BeaconFrame: Dot11Frame {
 	uint8_t bssid[packet::Len::MAC_ADDR];
 } Dot11BeaconFrame;
 
-
 #pragma pack(pop)
 
+ 
 namespace Dot11FC {
 	namespace Type {
 	enum : uint8_t {
@@ -79,8 +82,10 @@ namespace Dot11FC {
 	enum : uint8_t {
 		PROBE_REQUEST  = 0x04,
 		PROBE_RESPONSE = 0x05,
-		BEACON = 0x08,
+		BEACON         = 0x08,
 		BLOCK_ACK_REQ = 0x18,
+		BLOCK_ACK     = 0x19,
+		CLEAR_TO_SEND = 0x1c,
 		ACK = 0x1d,
 		DATA = 0x20,
 		NULL_DATA = 0x24,
@@ -88,5 +93,11 @@ namespace Dot11FC {
 	};
 	};
 };
+
+
+
 };
+
+
+
 #endif

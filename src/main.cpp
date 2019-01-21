@@ -14,6 +14,8 @@
 #define ETH_HEADER_SIZE 14   // 6 + 6 + 2
 #define ETHERTYPE_IP    0x0800
 
+using namespace wlan;
+
 typedef struct _eth_header {
   uint8_t dst_addr[MAC_ADDR_LEN];
   uint8_t src_addr[MAC_ADDR_LEN];
@@ -53,8 +55,22 @@ int main(int argc, char* argv[]) {
     if (res == -1 || res == -2) break;
     // printf("%ld   : %u bytes captured\n", header->ts.tv_sec, header->caplen);
 
-    wlan::RadiotapHeader* radiotap = (wlan::RadiotapHeader*)packet;
-    printf("length %hu\n", radiotap->length);
+    RadiotapHeader* radiotap = (RadiotapHeader*)packet;
+    // printf("radiotap length [%hu]\n", radiotap->length);
+    Dot11FrameControl* fc = (Dot11FrameControl*)(packet + radiotap->length);
+    switch (fc->getTypeSubtype()) {
+      case Dot11FC::TypeSubtype::BEACON:
+      {
+        Dot11BeaconFrame* beacon_frame = (Dot11BeaconFrame*)fc;
+        print_mac_addr("mac0 : ", beacon_frame->receiver_addr);
+        print_mac_addr("mac1 : ", beacon_frame->transmitter_addr);
+        print_mac_addr("mac2 : ", beacon_frame->bssid);
+        break;
+      }
+      default:
+        printf("this is not beacon\n");
+        break;
+    }
   }
 
   pcap_close(handle);
