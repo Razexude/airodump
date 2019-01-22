@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "packet.h"
+#include "MacAddr.h"
 
 namespace wlan {
 
@@ -38,13 +39,14 @@ typedef struct _Dot11FrameControl {
 typedef struct _Dot11Frame {
 	Dot11FrameControl fc;
 	uint16_t duration;
-	uint8_t receiver_addr[packet::Len::MAC_ADDR];
+	// uint8_t receiver_addr[LENGTH];
+	MacAddr receiver_addr;
 } Dot11Frame;
 
 typedef struct _Dot11DataFrame: Dot11Frame {
 	// receiver_addr == destination_addr == sta_addr
-	uint8_t transmitter_addr[packet::Len::MAC_ADDR];  // == bssid
-	uint8_t source_addr[packet::Len::MAC_ADDR];
+	MacAddr transmitter_addr;  // == bssid
+	MacAddr source_addr;
 	uint16_t frag_number: 4;
 	uint16_t seq_number : 12;
 	uint64_t ccmp_params;
@@ -52,8 +54,8 @@ typedef struct _Dot11DataFrame: Dot11Frame {
 
 typedef struct _Dot11QoSDataFrame: Dot11Frame {
 	// receiver_addr == destination_addr == sta_addr
-	uint8_t transmitter_addr[packet::Len::MAC_ADDR];    // == bssid
-	uint8_t source_addr[packet::Len::MAC_ADDR];
+	MacAddr transmitter_addr;    // == bssid
+	MacAddr source_addr;
 	uint16_t frag_number: 4;
 	uint16_t seq_number : 12;
 	uint16_t qos_ctrl;
@@ -62,8 +64,8 @@ typedef struct _Dot11QoSDataFrame: Dot11Frame {
 
 typedef struct _Dot11BeaconFrame: Dot11Frame {
 	// receiver_addr == destination_addr 
-	uint8_t transmitter_addr[packet::Len::MAC_ADDR];    // == source_addr
-	uint8_t bssid[packet::Len::MAC_ADDR];
+	MacAddr transmitter_addr;    // == source_addr
+	MacAddr bssid;
 } Dot11BeaconFrame;
 
 #pragma pack(pop)
