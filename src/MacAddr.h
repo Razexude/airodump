@@ -1,9 +1,11 @@
 #ifndef MAC_ADDR_H
 #define MAC_ADDR_H
 
+#include <iostream>
 #include <cstdint>
 #include <cstring>
 #include <assert.h>
+
 
 #pragma pack(push, 1)
 
@@ -15,13 +17,21 @@ private:
 
 public:
     operator uint8_t*() { return addr; }
-    void operator  =(const uint8_t* target) { memcpy(this->addr, target, LENGTH); }
-    bool operator ==(const MacAddr& target) { return !memcmp(this->addr, target.addr, LENGTH); }
-    bool operator ==(const uint8_t* target) { return !memcmp(this->addr, target, LENGTH); }
-    bool operator !=(const MacAddr& target) { return memcmp(this->addr, target.addr, LENGTH); }
-    bool operator !=(const uint8_t* target) { return memcmp(this->addr, target, LENGTH); }
+    void operator=(const uint8_t* target) { memcpy(this->addr, target, LENGTH); }
+    bool operator==(const MacAddr& target) { return !memcmp(this->addr, target.addr, LENGTH); }
+    bool operator==(const uint8_t* target) { return !memcmp(this->addr, target, LENGTH); }
+    bool operator!=(const MacAddr& target) { return memcmp(this->addr, target.addr, LENGTH); }
+    bool operator!=(const uint8_t* target) { return memcmp(this->addr, target, LENGTH); }
+    friend std::ostream& operator<<(std::ostream& os, MacAddr& obj) { 
+        return os << std::hex << unsigned(obj.addr[0]) << ":" <<
+                                 unsigned(obj.addr[1]) << ":" <<
+                                 +obj.addr[2] << ":" <<
+                                 unsigned(obj.addr[3]) << ":" <<
+                                 unsigned(obj.addr[4]) << ":" <<
+                                 unsigned(obj.addr[5]) << std::dec; 
+    }
 
-    char* toString(char *str, size_t len) const;
+    char* toCString(char *str, size_t len) const;
     void print() const;
 };
 

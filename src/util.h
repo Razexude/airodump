@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+void clearConsole();
+void printTableHeader();
+
 void printPacket(uint8_t *p, int len);
 
 void parse_ip(const uint8_t*);

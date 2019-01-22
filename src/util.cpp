@@ -1,11 +1,23 @@
 #include "util.h"
 
+#include <iostream>
+
 #include <stdio.h>
 #include <stdint.h>
 
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
+
+void clearConsole() {
+    std::cout << "\x1B[2J\x1B[H";
+}
+
+void printTableHeader() {
+    printf("\n");
+    printf(" %-18s %-4s %-10s %-3s %-4s %-3s %-4s %-4s %-6s %-4s %s\n\n", 
+           "BSSID", "PWR", "Beacons", "#Data,", "#/s", "CH", "MB", "ENC", "CIPHER", "AUTH", "ESSID");
+}
 
 void printPacket(uint8_t *p, int len) {
 	int i;

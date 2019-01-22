@@ -58,22 +58,24 @@ int main(int argc, char* argv[]) {
       case Dot11FC::TypeSubtype::BEACON:
       {
         Dot11BeaconFrame* beacon_frame = (Dot11BeaconFrame*)fc;
-        beacon_frame->bssid.print();
+        std::cout << beacon_frame->bssid << std::endl;
+        printf("type[%x]channel[%x]\n",
+                                  fc->getTypeSubtype(), 
+                                  *(int16_t*)radiotap->getField(PresentFlag::CHANNEL));
 
         auto exist = false;
         for (auto ap_info = ap_list.begin(); ap_info != ap_list.end(); ++ap_info) {
           if (ap_info->bssid == beacon_frame->bssid) {
             exist = true;
-            printf("이미 있는거네!\n");
+            // printf("이미 있는거네!\n");
             ap_info->beacons += 1;
             ap_info->pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
             break;
           }
         }
         if (exist == false) {
-            printf("새로운거 추가!\n");
-            AirodumpApInfo ap_info;
-            ap_info.bssid = beacon_frame->bssid;
+            // printf("새로운거 추가!\n");
+            AirodumpApInfo ap_info(beacon_frame->bssid);
             ap_info.beacons += 1;
             ap_info.pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
             ap_list.push_back(ap_info);
@@ -81,12 +83,14 @@ int main(int argc, char* argv[]) {
         break;
       }
       default:
-        printf("this is not beacon\n");
         break;
     }
-    
-    
 
+    clearConsole();
+    printTableHeader();
+    for (auto ap_info = ap_list.begin(); ap_info != ap_list.end(); ++ap_info) {
+      std::cout << *ap_info << std::endl;
+    }
   }
 
   pcap_close(handle);
@@ -96,6 +100,5 @@ int main(int argc, char* argv[]) {
 
 // 암호화는 dot11 header에서 flag protected ==1 이고 ccmpㅣ면wpa
 // WEP는 radiotap header의 flag에 항목이 있는 것 같다.
-// power는 그냥 radiotap에서 가져오면 되는 것 같고
 // RXQ는 sequence number를 봐서 비율을 따지면 되겠고.
 
