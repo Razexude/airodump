@@ -6,14 +6,15 @@
 #include <arpa/inet.h>
 #include <pcap.h>
 
-#include <map>
+#include <vector>
+#include <string>
 
 #include "MacAddr.h"
 #include "packet.h"
 #include "dot11.h"
 #include "util.h"
 #include "my_radiotap.h"
-
+#include "AirodumpApInfo.h"
 
 using namespace wlan;
 
@@ -23,7 +24,10 @@ void usage(char *fname) {
   printf("sample: %s mon0\n", fname);
 }
 
-// std::map<MacAddr, 
+// map으로 하려다가... MacAddr을 key로 사용하려면 operator<도 오버로딩 해야하고 번거로워서. 컨테이너 규모가 작으면 vector가 더 빠르기도 하고.
+std::vector<AirodumpApInfo> ap_list;
+// std::vector<AirodumpStationInfo> station_list;
+
 
 int main(int argc, char* argv[]) {
   if (argc != 2) {
@@ -53,14 +57,26 @@ int main(int argc, char* argv[]) {
     switch (fc->getTypeSubtype()) {
       case Dot11FC::TypeSubtype::BEACON:
       {
-        printf("%d\n", *(uint16_t*)radiotap->getField(PresentFlag::CHANNEL));
+        printf("%d\n", *(uint8_t*)radiotap->getField(PresentFlag::CHANNEL));
         Dot11BeaconFrame* beacon_frame = (Dot11BeaconFrame*)fc;
         beacon_frame->bssid.print();
-        // if 새로운 BSSID면 map에 추가 아예 new로 하나 할당해서 잡아버리는게 좋겠군.
-        // 기존에 있는거면 count ++
-        
-        // 일단 airodump에서 사용하는 column들에 대한 파싱을 완료해서 구조체로 정리하고, map<MacAddr, 구조체>이렇게 하면 될듯.
-        
+
+        auto exist = false;
+        for (auto ap_info = ap_list.begin(); ap_info != ap_list.end(); ++ap_info) {
+          if (ap_info->bssid == beacon_frame->bssid) {
+            exist = true;
+            printf("이미 있는거네!\n");
+            ap_info->beacons += 1;
+            break;
+          }
+        }
+        if (exist == false) {
+            printf("새로운거 추가!\n");
+            AirodumpApInfo ap_info;
+            ap_info.bssid = beacon_frame->bssid;
+            ap_info.beacons += 1;
+            ap_list.push_back(ap_info);
+        }
         break;
       }
       default:
