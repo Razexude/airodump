@@ -1,85 +1,67 @@
 #ifndef UMBUM_RADIOTAP_H
 #define UMBUM_RADIOTAP_H
 
+#include <cstdio>
 #include <cstdint>
 
-namespace wlan{
-#pragma pack(push, 1)
+namespace wlan {
 
+namespace PresentFlag {
+enum T {
+	TSFT = 0,
+	FLAGS = 1,
+	RATE = 2,
+	CHANNEL = 3,
+	FHSS = 4,
+	DBM_ANTSIGNAL = 5,
+	DBM_ANTNOISE = 6,
+	LOCK_QUALITY = 7,
+	TX_ATTENUATION = 8,
+	DB_TX_ATTENUATION = 9,
+	DBM_TX_POWER = 10,
+	ANTENNA = 11,
+	DB_ANTSIGNAL = 12,
+	DB_ANTNOISE = 13,
+	RX_FLAGS = 14,
+	TX_FLAGS = 15,
+	RTS_RETRIES = 16,
+	DATA_RETRIES = 17,
+	CHANNEL_PLUS = 18,
+	MCS = 19,
+	AMPDU_STATUS = 20,
+	VHT = 21,
+	TIMESTAMP = 22,
 
-struct _PresentFlags {
-	uint32_t tsft : 1,
-	uint32_t flags : 1,
-	uint32_t rate : 1,
-	uint32_t channel : 1,
-	uint32_t fhss : 1,
-	uint32_t dbm_antsignal : 1,
-	uint32_t dbm_antnoise : 1,
-	uint32_t lock_quality : 1,
-	uint32_t tx_attenuation : 1,
-	uint32_t db_tx_attenuation : 1,
-	uint32_t dbm_tx_power : 1,
-	uint32_t antenna : 1,
-	uint32_t db_antsignal : 1,
-	uint32_t db_antnoise : 1,
-	uint32_t rx_flags : 1,
-	uint32_t tx_flags : 1,
-	uint32_t rts_retries : 1,
-	uint32_t data_retries : 1,
-	uint32_t channel_plus : 1,
-	uint32_t mcs : 1,
-	uint32_t ampdu_status : 1,
-	uint32_t vht : 1,
-	uint32_t timestamp : 1,
-    uint32_t he : 1,
-    uint32_t he_mu : 1,
-    uint32_t reserved : 4,
-    uint32_t radiotap_ns_next : 1,
-    uint32_t vendor_ns_next : 1,
-    uint32_t ext : 1
+	/* valid in every it_present bitmap, even vendor namespaces */
+	RADIOTAP_NAMESPACE = 29,
+	VENDOR_NAMESPACE = 30,
+	EXT = 31
+};
+}
+
+struct _radiotap_size_info {
+	uint8_t align;
+	uint8_t size;
 };
 
 
+#pragma pack(push, 1)
 typedef struct _RadiotapHeader {
+public:
 	uint8_t version;
 	uint8_t pad;
 	uint16_t length;
-	struct _PresentFlags present;
+	uint32_t present;
 
-	uint16_t getChannel() {
-		/***
-		 * 더 우아하게 처리하려면?
-		 * 리스트에 ext의 size, align 정보 넣고, 함수의 인자로 몇 번째 정보인지를 받음.
-		 * 몇 번째 정보인지가 곧 index이니까, 이 index까지 반복돌면서 리스트에서 size꺼내서 offset에 더해감.
-		 * 이런 식으로 처리하면 하드코딩 안해도 된다.
-		 */
-		uint8_t* offset = 0;
-		uint8_t* align  = 0;
-		if (!present.channel) {
-			return NULL;
-		}
-
-		if (present.ext)
-			offset += 4;
-
-		if (present.tsft)
-			offset += 8;
-		
-		if (present.flags)
-			offset += 1;
-		
-		if (present.rate)
-			offset += 1;
-		else
-			align += 1;
-		
-		uint8_t *p_channel_frequency = ((uint8_t*)this + offset + align);
-		return ntohs(p_channel_frequency);
-	}
+public:
+	// 여기서 template를 써야하나? 리턴값이 애매해지니까.
+	uint8_t* getField(PresentFlag::T ps);
 } RadiotapHeader;
-
 
 #pragma pack(pop)
 }
 
 #endif
+
+
+

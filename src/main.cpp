@@ -12,6 +12,7 @@
 #include "packet.h"
 #include "dot11.h"
 #include "util.h"
+#include "my_radiotap.h"
 
 
 using namespace wlan;
@@ -52,9 +53,10 @@ int main(int argc, char* argv[]) {
     switch (fc->getTypeSubtype()) {
       case Dot11FC::TypeSubtype::BEACON:
       {
+        printf("%d\n", *(uint16_t*)radiotap->getField(PresentFlag::CHANNEL));
         Dot11BeaconFrame* beacon_frame = (Dot11BeaconFrame*)fc;
         beacon_frame->bssid.print();
-        // if 새로운 BSSID면 map에 추가.
+        // if 새로운 BSSID면 map에 추가 아예 new로 하나 할당해서 잡아버리는게 좋겠군.
         // 기존에 있는거면 count ++
         
         // 일단 airodump에서 사용하는 column들에 대한 파싱을 완료해서 구조체로 정리하고, map<MacAddr, 구조체>이렇게 하면 될듯.
@@ -71,4 +73,9 @@ int main(int argc, char* argv[]) {
   return 0;
 }
 
+
+// 암호화는 dot11 header에서 flag protected ==1 이고 ccmpㅣ면wpa
+// WEP는 radiotap header의 flag에 항목이 있는 것 같다.
+// power는 그냥 radiotap에서 가져오면 되는 것 같고
+// RXQ는 sequence number를 봐서 비율을 따지면 되겠고.
 
