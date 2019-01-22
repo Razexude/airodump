@@ -9,18 +9,6 @@ namespace wlan {
 
 #pragma pack(push, 1)
 
-typedef struct _RadiotapHeader {
-	uint8_t version;
-	uint8_t pad;
-	uint16_t length;
-	uint32_t present_flag1;
-	uint32_t present_flag2;
-	uint8_t flags;
-	uint8_t data_rate;
-	uint16_t channel_frequency;
-} RadiotapHeader;
-
-
 typedef struct _Dot11FrameControl {
 	union {
 		struct {
@@ -68,8 +56,9 @@ typedef struct _Dot11BeaconFrame: Dot11Frame {
 	MacAddr bssid;
 } Dot11BeaconFrame;
 
-#pragma pack(pop)
 
+#pragma pack(pop)
+ 
  
 namespace Dot11FC {
 	namespace Type {
@@ -95,8 +84,6 @@ namespace Dot11FC {
 	};
 	};
 };
-
-
 
 };
 
