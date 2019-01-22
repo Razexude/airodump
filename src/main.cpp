@@ -57,7 +57,6 @@ int main(int argc, char* argv[]) {
     switch (fc->getTypeSubtype()) {
       case Dot11FC::TypeSubtype::BEACON:
       {
-        printf("%d\n", *(uint8_t*)radiotap->getField(PresentFlag::CHANNEL));
         Dot11BeaconFrame* beacon_frame = (Dot11BeaconFrame*)fc;
         beacon_frame->bssid.print();
 
@@ -67,6 +66,7 @@ int main(int argc, char* argv[]) {
             exist = true;
             printf("이미 있는거네!\n");
             ap_info->beacons += 1;
+            ap_info->pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
             break;
           }
         }
@@ -75,6 +75,7 @@ int main(int argc, char* argv[]) {
             AirodumpApInfo ap_info;
             ap_info.bssid = beacon_frame->bssid;
             ap_info.beacons += 1;
+            ap_info.pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
             ap_list.push_back(ap_info);
         }
         break;
@@ -83,6 +84,9 @@ int main(int argc, char* argv[]) {
         printf("this is not beacon\n");
         break;
     }
+    
+    
+
   }
 
   pcap_close(handle);

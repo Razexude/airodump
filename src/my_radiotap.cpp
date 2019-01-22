@@ -34,7 +34,6 @@ static const struct _radiotap_size_info radiotap_size_arr[] = {
 
 uint8_t* RadiotapHeader::getField(PresentFlag::T ps) {
     uintptr_t offset = (uintptr_t)this;
-    uintptr_t align  = 0;
 
     // version, pad, length, present의 크기만큼 건너 뛰어준다.
     offset += sizeof(RadiotapHeader);
@@ -48,14 +47,15 @@ uint8_t* RadiotapHeader::getField(PresentFlag::T ps) {
     // 그 field가 있다는 의미이므로 그 field의 size만큼 offset에 더해줘서 건너뛴다.
     for (int i = 0; i < ps; i++) {
         if ((present >> i) & 0b1) {
+            // alignment 해준다. 각 필드마다 요구하는 align 기준이 다르기 때문에 radiotap_size_arr에서 ps의 align을 읽어온다.
+            if (offset % radiotap_size_arr[i].align != 0) {
+                offset += radiotap_size_arr[i].align - (offset % radiotap_size_arr[i].align);
+            }
             offset += radiotap_size_arr[i].size;
         }
     }
 
-    // alignment 해준다. 각 필드마다 요구하는 align 기준이 다르기 때문에 radiotap_size_arr에서 ps의 align을 읽어온다.
-    if (offset % radiotap_size_arr[ps].align != 0) {
-        align = radiotap_size_arr[ps].align - (offset % radiotap_size_arr[ps].align);
-    }
+    
 
     // 아예 템플릿을 써서 여기서 값으로 바꿔서 내보낼까 하다가... 그냥 offset만 리턴하는걸로 처리.
     return (uint8_t*)offset;

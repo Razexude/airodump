@@ -1,6 +1,7 @@
 #ifndef AIRODUMPLINE_H
 #define AIRODUMPLINE_H
 
+#include <cstdint>
 #include <string>
 
 #include "MacAddr.h"
@@ -9,7 +10,7 @@
 class AirodumpApInfo {
 public:
   MacAddr bssid;
-  int pwr;
+  int8_t pwr;
   unsigned int beacons = 0;
   unsigned int num_data = 0;
   unsigned int num_data_per_sec = 0;
