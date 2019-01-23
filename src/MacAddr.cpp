@@ -2,6 +2,7 @@
 #include "MacAddr.h"
 
 #include <cstdio>
+#include <assert.h>
 
 char* MacAddr::toCString(char *str, size_t len) const {
     // GC가 안되니까 되게 애매하네... static에 thread를 걸면 성능이 안나올 것 같고... 

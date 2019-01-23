@@ -4,7 +4,7 @@
 #include <iostream>
 #include <cstdint>
 #include <cstring>
-#include <assert.h>
+#include <iomanip>
 
 
 #pragma pack(push, 1)
@@ -23,12 +23,14 @@ public:
     bool operator!=(const MacAddr& target) { return memcmp(this->addr, target.addr, LENGTH); }
     bool operator!=(const uint8_t* target) { return memcmp(this->addr, target, LENGTH); }
     friend std::ostream& operator<<(std::ostream& os, MacAddr& obj) { 
-        return os << std::hex << unsigned(obj.addr[0]) << ":" <<
-                                 unsigned(obj.addr[1]) << ":" <<
-                                 +obj.addr[2] << ":" <<
-                                 unsigned(obj.addr[3]) << ":" <<
-                                 unsigned(obj.addr[4]) << ":" <<
-                                 unsigned(obj.addr[5]) << std::dec; 
+        return os << std::hex << std::setfill('0') <<
+                        std::setw(2) << unsigned(obj.addr[0]) << ":" <<
+                        std::setw(2) << unsigned(obj.addr[1]) << ":" <<
+                        std::setw(2) << +obj.addr[2] << ":" <<
+                        std::setw(2) << unsigned(obj.addr[3]) << ":" <<
+                        std::setw(2) << unsigned(obj.addr[4]) << ":" <<
+                        std::setw(2) << unsigned(obj.addr[5]) <<
+                    std::dec << std::setfill(' '); 
     }
 
     char* toCString(char *str, size_t len) const;

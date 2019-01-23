@@ -2,7 +2,6 @@
 #define DOC11_H
 #include <stdint.h>
 
-#include "packet.h"
 #include "MacAddr.h"
 
 namespace wlan {
@@ -54,6 +53,8 @@ typedef struct _Dot11BeaconFrame: Dot11Frame {
 	// receiver_addr == destination_addr 
 	MacAddr transmitter_addr;    // == source_addr
 	MacAddr bssid;
+	uint16_t frag_num: 4;
+	uint16_t seq_num : 12;
 } Dot11BeaconFrame;
 
 
