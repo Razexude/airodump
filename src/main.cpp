@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <pcap.h>
 
+#include <map>
 #include <vector>
 #include <string>
 
@@ -23,8 +24,9 @@ void usage(char *fname) {
   printf("sample: %s mon0\n", fname);
 }
 
-// map으로 하려다가... MacAddr을 key로 사용하려면 operator<도 오버로딩 해야하고 번거로워서. 컨테이너 규모가 작으면 vector가 더 빠르기도 하고.
+std::map<MacAddr, AirodumpApInfo> ap_list_;
 std::vector<AirodumpApInfo> ap_list;
+
 // std::vector<AirodumpStationInfo> station_list;
 
 
@@ -52,13 +54,13 @@ int main(int argc, char* argv[]) {
 
     RadiotapHeader* radiotap = (RadiotapHeader*)packet;
     // printf("radiotap length [%hu]\n", radiotap->length);
-    Dot11FrameControl* fc = (Dot11FrameControl*)(packet + radiotap->length);
+    Dot11Frame* fc = (Dot11Frame*)(packet + radiotap->length);
     if (fc->getTypeSubtype() == Dot11FC::TypeSubtype::BEACON) {
       Dot11BeaconFrame* beacon_frame = (Dot11BeaconFrame*)fc;
       std::cout << beacon_frame->bssid << std::endl;
-      printf("type[%x]channel[%x]\n",
-                                fc->getTypeSubtype(), 
-                                *(int16_t*)radiotap->getField(PresentFlag::CHANNEL));
+      // printf("type[%x]channel[%x]\n",
+      //                           fc->getTypeSubtype(), 
+      //                           *(int16_t*)radiotap->getField(PresentFlag::CHANNEL));
 
       auto exist = false;
       for (auto ap_info = ap_list.begin(); ap_info != ap_list.end(); ++ap_info) {
@@ -79,6 +81,7 @@ int main(int argc, char* argv[]) {
           auto pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
           if (pwr != 0)
             ap_info.pwr = pwr;
+          // 여기서 길이 구해서 Dot11wlanElement를 호출해서 정보를 가져와야겠다. 그리고 ap_info에 넣어주기.
           ap_list.push_back(ap_info);
       }
     }
