@@ -24,6 +24,7 @@ public:
   std::string essid;
 
 public:
+  AirodumpApInfo() {}
   AirodumpApInfo(MacAddr _bssid): bssid(_bssid) {}
 
   friend std::ostream& operator<<(std::ostream& os, AirodumpApInfo& obj) {

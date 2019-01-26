@@ -1,5 +1,5 @@
 CC       := g++
-LDLIBS   := -lpcap
+LDLIBS   := -lpcap -pthread
 # CFLAGS   := -g
 
 

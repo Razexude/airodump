@@ -26,12 +26,14 @@ public:
     bool operator!=(const MacAddr& target) { return memcmp(this->addr, target.addr, LENGTH); }
     bool operator!=(const uint8_t* target) { return memcmp(this->addr, target, LENGTH); }
 
+    bool operator< (const MacAddr& target) const { return memcmp(this->addr, target.addr, LENGTH); }
+
     operator std::string() const { 
         char buf[18];
         sprintf(buf, "%02x:%02x:%02x:%02x:%02x:%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
         return std::string(buf);
     }
-    friend std::ostream& operator<<(std::ostream& os, MacAddr& obj) { 
+    friend std::ostream& operator<<(std::ostream& os, const MacAddr& obj) { 
         return os << std::hex << std::setfill('0') <<
                         std::setw(2) << unsigned(obj.addr[0]) << ":" <<
                         std::setw(2) << unsigned(obj.addr[1]) << ":" <<
