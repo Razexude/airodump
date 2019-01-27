@@ -12,12 +12,14 @@
 class AirodumpApInfo {
 public:
   MacAddr bssid;
-  int8_t pwr;
+  int          pwr;
   unsigned int beacons = 0;
   unsigned int num_data = 0;
   unsigned int num_data_per_sec = 0;
   unsigned int channel;
-  std::string maximum_speed;
+  unsigned int max_speed;
+  char         qos;
+  char         preamble;
   std::string enc;
   std::string cipher;
   std::string auth;
@@ -29,12 +31,12 @@ public:
 
   friend std::ostream& operator<<(std::ostream& os, AirodumpApInfo& obj) {
     return os << " " << obj.bssid << 
-                 std::setw(5) << int(obj.pwr) << " " << 
+                 std::setw(5) << obj.pwr << " " << 
                  std::setw(8) << obj.beacons << " " << 
                  std::setw(8) << obj.num_data << " " <<
-                 std::setw(4) << obj.num_data_per_sec << " ";
-                //  obj.channel << " " <<
-                //  obj.maximum_speed << " " <<
+                 std::setw(4) << obj.num_data_per_sec << " " <<
+                 std::setw(3) << obj.channel << " " <<
+                 std::setw(3) << obj.max_speed << " ";
                 //  obj.enc << " " <<
                 //  obj.cipher << " " <<
                 //  obj.auth << " " <<

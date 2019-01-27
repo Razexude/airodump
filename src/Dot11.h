@@ -49,13 +49,6 @@ typedef struct _Dot11BeaconFrame: Dot11Frame {
 } Dot11BeaconFrame;
 
 
-
-typedef struct _Dot11wlanInfo {
-	uint64_t timestamp;
-	uint16_t beacon_interval;
-	uint16_t capabilities_info;
-}
-
 #pragma pack(pop)
  
  
@@ -84,8 +77,6 @@ namespace Dot11FC {
 	};
 };
 
+
 };
-
-
-
 #endif
