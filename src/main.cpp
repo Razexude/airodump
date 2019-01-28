@@ -82,37 +82,23 @@ int main(int argc, char* argv[]) {
         AirodumpApInfo ap_info(beacon_frame->bssid);
         ap_info.beacons = 1;
         auto pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
-        if (pwr != 0)
-          ap_info.pwr = pwr;
+        ap_info.pwr = (pwr != 0) ? pwr : ap_info.pwr;
+
+        auto flags = *(int8_t*)radiotap->getField(PresentFlag::FLAGS);
+        ap_info.preamble = (flags & PREAMBLE_MASK) ? '.' : ' ';
+
+        Dot11FrameBody* frame_body = (Dot11FrameBody*)((uintptr_t)beacon_frame + sizeof(Dot11BeaconFrame));
+        if (frame_body->capabilities_info & CAPABILITY_WEP) {
+            ap_info.enc |= STD_WEP;
+            ap_info.cipher |= ENC_WEP;
+        }
+        else {
+            ap_info.enc |= STD_OPN;
+        }
         
-        // auto dot11_frame_body_len = header->caplen - radiotap->length - sizeof(Dot11BeaconFrame);
-        Dot11FrameBody* frame_body = (Dot11FrameBody*)((uintptr_t)beacon_frame + (uintptr_t)sizeof(Dot11BeaconFrame));
-        
-        // calc CH
-        auto res = frame_body->getTaggedParam(Dot11TagNum::DSPARMS, (uint8_t*)(packet + header->caplen));
-        if (res.second != NULL) {
-          ap_info.channel = *(res.first);
-        }
-
-        // calc MB
-        res = frame_body->getTaggedParam(Dot11TagNum::RATES, (uint8_t*)(packet + header->caplen));
-        if (res.second != NULL) {
-          auto offset = res.first;
-          auto len = res.second;
-          offset += len - 1;   // 현재 Tag의 마지막 데이터
-          auto speed = (*offset & 0x7F) / 2;
-          ap_info.max_speed = (ap_info.max_speed < speed) ? speed : ap_info.max_speed;
-        }
-
-        res = frame_body->getTaggedParam(Dot11TagNum::XRATES, (uint8_t*)(packet + header->caplen));
-        if (res.second != NULL) {
-          auto offset = res.first;
-          auto len = res.second;
-          offset += len - 1;   // 현재 Tag의 마지막 데이터
-          auto speed = (*offset & 0x7F) / 2;
-          ap_info.max_speed = (ap_info.max_speed < speed) ? speed : ap_info.max_speed;
-        }
-
+        // parse 802.11 Tagged Parameter
+        uint8_t* it = (uint8_t*)((uintptr_t)beacon_frame + sizeof(Dot11BeaconFrame) + sizeof(Dot11FrameBody));
+        ap_info.parseTaggedParam(it, packet + header->caplen);
         ap_list[beacon_frame->bssid] = ap_info;
       }
     }

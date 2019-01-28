@@ -6,6 +6,8 @@
 
 namespace wlan {
 
+const uint8_t PREAMBLE_MASK = 0b10;
+
 namespace PresentFlag {
 enum T {
 	TSFT = 0,
@@ -54,13 +56,12 @@ public:
 	uint32_t present;
 
 public:
-	// 여기서 template를 써야하나? 리턴값이 애매해지니까.
+	// 여기서 template를 써야하나? 리턴값이 애매해지니까. auto는?? 쓰면 어떻게되나?
 	uint8_t* getField(PresentFlag::T ps);
 } RadiotapHeader;
-
 #pragma pack(pop)
-}
 
+}
 #endif
 
 

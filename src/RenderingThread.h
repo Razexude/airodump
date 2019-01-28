@@ -3,7 +3,9 @@
 #include <atomic>
 
 #include "util.h"
+#include "AirodumpApInfo.h"
 
+using namespace wlan;
 
 class RenderingThread {
 public:

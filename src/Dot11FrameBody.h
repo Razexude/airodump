@@ -5,7 +5,13 @@
 #include <cstddef>
 #include <utility>
 
+
 namespace wlan {
+
+const char MS_SPECIFIC_SECURITY[] = "\x00\x50\xf2\x01\x01\x00";
+const char MS_SPECIFIC_QOS[] = "\x00\x50\xf2\x02\x01\x01";
+
+const int  CAPABILITY_WEP = 0b10000;
 
 namespace Dot11TagNum {
 enum T {
@@ -69,7 +75,5 @@ typedef struct _Dot11FrameBody {
 
 #pragma pack(pop)
 
-
 }
-
 #endif
