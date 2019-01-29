@@ -24,7 +24,7 @@ typedef struct _Dot11Frame {
 typedef struct _Dot11DataFrame: Dot11Frame {
 	// receiver_addr == destination_addr == sta_addr
 	MacAddr transmitter_addr;  // == bssid
-	MacAddr source_addr;
+	MacAddr addr3;
 	uint16_t frag_number: 4;
 	uint16_t seq_number : 12;
 	uint64_t ccmp_params;
@@ -33,7 +33,7 @@ typedef struct _Dot11DataFrame: Dot11Frame {
 typedef struct _Dot11QoSDataFrame: Dot11Frame {
 	// receiver_addr == destination_addr == sta_addr
 	MacAddr transmitter_addr;    // == bssid
-	MacAddr source_addr;
+	MacAddr addr3;
 	uint16_t frag_number: 4;
 	uint16_t seq_number : 12;
 	uint16_t qos_ctrl;
@@ -42,7 +42,7 @@ typedef struct _Dot11QoSDataFrame: Dot11Frame {
 
 typedef struct _Dot11BeaconFrame: Dot11Frame {
 	// receiver_addr == destination_addr 
-	MacAddr transmitter_addr;    // == source_addr
+	MacAddr transmitter_addr;    // == addr3
 	MacAddr bssid;
 	uint16_t frag_num: 4;
 	uint16_t seq_num : 12;
