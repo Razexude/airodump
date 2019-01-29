@@ -91,9 +91,7 @@ int main(int argc, char* argv[]) {
         auto pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
         ap_info.pwr = (pwr != 0) ? pwr : ap_info.pwr;
 
-        auto flags = *(int8_t*)radiotap->getField(PresentFlag::FLAGS);
-        ap_info.preamble = (flags & PREAMBLE_MASK) ? '.' : ' ';
-
+        // parse Fixed Parameter
         Dot11FrameBody* frame_body = (Dot11FrameBody*)((uintptr_t)beacon_frame + sizeof(Dot11BeaconFrame));
         if (frame_body->capabilities_info & CAPABILITY_WEP) {
             ap_info.enc |= STD_WEP;
@@ -102,7 +100,9 @@ int main(int argc, char* argv[]) {
         else {
             ap_info.enc |= STD_OPN;
         }
-
+        ap_info.preamble = (frame_body->capabilities_info & PREAMBLE_MASK) ? '.' : ' ';
+        printf("%x\n", frame_body->capabilities_info & PREAMBLE_MASK);
+        printf("%c\n", ap_info.preamble);
         // parse 802.11 Tagged Parameter
         uint8_t* it = (uint8_t*)((uintptr_t)beacon_frame + sizeof(Dot11BeaconFrame) + sizeof(Dot11FrameBody));
         ap_info.parseTaggedParam(it, packet + header->caplen);

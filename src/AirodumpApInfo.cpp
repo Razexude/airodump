@@ -24,7 +24,7 @@ void AirodumpApInfo::parseTaggedParam(uint8_t* it, const uint8_t* packet_end) {
         }
         else if (tag == Dot11TagNum::VENDOR &&
             (len >= 8) && (memcmp(data, MS_SPECIFIC_QOS, 6) == 0)) {
-            this->qos = '.';
+            this->qos = 'e';
         }
         else if (tag == Dot11TagNum::VENDOR &&
             (len >= 8) && (memcmp(data, MS_SPECIFIC_SECURITY, 6) == 0)) {

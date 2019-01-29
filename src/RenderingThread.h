@@ -23,6 +23,7 @@ public:
         system_clock::time_point now;
         time_t now_tt;
         duration<double> elapsed_seconds;
+        int i = 0;
 
         while (true) {
             clearConsole();
@@ -43,17 +44,21 @@ public:
             for (auto station_info = station_list.begin(); station_info != station_list.end(); ++station_info) {
                 std::cout << station_info->second << std::endl;
             }
-
-            // channel hopping ; INT_NAME_MAX = 16
-            snprintf(channel_hopping_cmd, 39, "iw dev %s set channel %d", dev, channel_list[ch_idx]);
-            int ret = system(channel_hopping_cmd);
-            if (ret == 0) {
-                ch_idx = (ch_idx + 1) % 14;
+            
+            if (i > 6) {
+                i = 0;
+                // channel hopping ; INT_NAME_MAX = 16
+                snprintf(channel_hopping_cmd, 39, "iw dev %s set channel %d", dev, channel_list[ch_idx]);
+                int ret = system(channel_hopping_cmd);
+                if (ret == 0) {
+                    ch_idx = (ch_idx + 1) % 14;
+                }
+                else {
+                    // something wrong.
+                }
             }
-            else {
-                // something wrong.
-            }
-
+            
+            i++;
             lock.clear();
             std::this_thread::sleep_for(std::chrono::milliseconds(100)); // 0.1sec.
         }
