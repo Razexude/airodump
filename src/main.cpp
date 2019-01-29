@@ -64,50 +64,75 @@ int main(int argc, char* argv[]) {
     if (res == -1 || res == -2) break;
     // printf("%ld   : %u bytes captured\n", header->ts.tv_sec, header->caplen);
 
-    while (container_lock.test_and_set());    // spin
-
     RadiotapHeader* radiotap = (RadiotapHeader*)packet;
     Dot11Frame* frame = (Dot11Frame*)(packet + radiotap->length);
+    if (frame->type == Dot11FC::Type::CTRL) {
+      continue;    // not interested
+    }
+
+    while (container_lock.test_and_set());    // spin
+
     if ((frame->getTypeSubtype() == Dot11FC::TypeSubtype::BEACON)
         || (frame->getTypeSubtype() == Dot11FC::TypeSubtype::PROBE_RESPONSE)) {
       // parse beacon or probe response
-      Dot11BeaconFrame* beacon_frame = (Dot11BeaconFrame*)frame;
+      Dot11MgtFrame* beacon_frame = (Dot11MgtFrame*)frame;
 #if DEBUG
       std::cout << beacon_frame->bssid << std::endl;
 #endif
-      if (ap_list.count(beacon_frame->bssid)) {
-        // already exist
-        // printf("EXIST!! count %d\n", ap_list.count(beacon_frame->bssid));
-        ap_list[beacon_frame->bssid].beacons += 1;
-        auto pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
-        if (pwr != 0)
-          ap_list[beacon_frame->bssid].pwr = pwr;
+
+      auto pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
+      if (ap_list.count(beacon_frame->bssid) == 0) {
+        // new AP
+        AirodumpApInfo new_ap_info(beacon_frame->bssid);
+        ap_list[beacon_frame->bssid] = new_ap_info;
+      }
+
+      AirodumpApInfo& ap_info = ap_list[beacon_frame->bssid];
+      ap_info.beacons += 1;
+      ap_info.pwr = (pwr != 0) ? pwr : ap_info.pwr;
+
+      // parse Fixed Parameter
+      Dot11FrameBody* frame_body = (Dot11FrameBody*)((uintptr_t)beacon_frame + sizeof(Dot11MgtFrame));
+      if (frame_body->capabilities_info & CAPABILITY_WEP) {
+        ap_info.enc |= STD_WEP;
+        ap_info.cipher |= ENC_WEP;
       }
       else {
-        // new AP
-        // printf("NEW!!\n");
-        AirodumpApInfo ap_info(beacon_frame->bssid);
-        ap_info.beacons = 1;
-        auto pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
-        ap_info.pwr = (pwr != 0) ? pwr : ap_info.pwr;
-
-        // parse Fixed Parameter
-        Dot11FrameBody* frame_body = (Dot11FrameBody*)((uintptr_t)beacon_frame + sizeof(Dot11BeaconFrame));
-        if (frame_body->capabilities_info & CAPABILITY_WEP) {
-            ap_info.enc |= STD_WEP;
-            ap_info.cipher |= ENC_WEP;
-        }
-        else {
-            ap_info.enc |= STD_OPN;
-        }
-        ap_info.preamble = (frame_body->capabilities_info & PREAMBLE_MASK) ? '.' : ' ';
-        printf("%x\n", frame_body->capabilities_info & PREAMBLE_MASK);
-        printf("%c\n", ap_info.preamble);
-        // parse 802.11 Tagged Parameter
-        uint8_t* it = (uint8_t*)((uintptr_t)beacon_frame + sizeof(Dot11BeaconFrame) + sizeof(Dot11FrameBody));
-        ap_info.parseTaggedParam(it, packet + header->caplen);
-        ap_list[beacon_frame->bssid] = ap_info;
+        ap_info.enc |= STD_OPN;
       }
+      ap_info.preamble = (frame_body->capabilities_info & PREAMBLE_MASK) ? '.' : ' ';
+      // parse 802.11 Tagged Parameter
+      uint8_t* it = (uint8_t*)((uintptr_t)beacon_frame + sizeof(Dot11MgtFrame) + sizeof(Dot11FrameBody));
+      ap_info.parseTaggedParam(it, packet + header->caplen);
+
+    }
+    else if (frame->getTypeSubtype() == Dot11FC::TypeSubtype::PROBE_REQUEST) {
+      // parse probe request. probe request는 station이 보낸다.
+      Dot11MgtFrame* probe_req_frame = (Dot11MgtFrame*)frame;
+      MacAddr station = probe_req_frame->transmitter_addr;
+      // std::cout << station << " / " << probe_req_frame->bssid <<  std::endl;
+      if (station_list.count(station) == 0) {
+        // new station
+        AirodumpStationInfo new_station_info(station);
+        new_station_info.bssid = probe_req_frame->bssid;    // It's probably MacAddr::BROADCAST
+        new_station_info.seq_num = probe_req_frame->seq_num;
+        station_list[station] = new_station_info;
+      }
+
+      AirodumpStationInfo& station_info = station_list[station];
+      // get ssid
+      uint8_t* it = (uint8_t*)((uintptr_t)probe_req_frame + sizeof(Dot11MgtFrame));
+      station_info.parseTaggedParam(it, packet + header->caplen);
+      if (station_info.bssid == probe_req_frame->bssid) {
+        int losts = probe_req_frame->seq_num - station_info.seq_num;
+        if (losts > 0)
+          station_info.lost += losts;
+        station_info.seq_num = probe_req_frame->seq_num;
+      }
+      
+      // airodump 설명에는 data 일 때만 증가시킨다고 되어 있는데, 실제로 실험해보면 probe request도 증가함.
+      station_info.frames += 1;
+      
     }
     else if (frame->type == Dot11FC::Type::DATA) {
       // parse data
@@ -115,36 +140,27 @@ int main(int argc, char* argv[]) {
       auto ds_status = data_frame->flags & 0b11;
       MacAddr bssid;
       MacAddr station;
-      if (ds_status == 0b00) {
+      if (ds_status == Dot11DS::TO_FROM_DS) {
         // to ds from ds 둘 다 0일 때. receiver, transmitter 둘 다 station으로 추가해버림
         // src에서 dst로 direct하게 보내는거라 AP 정보는 없음. (not associated)   
         // airodump 예는 이럼. (not associated)   94:8B:C1:56:FC:E6  -38    0 - 1      0        2       
+        container_lock.clear();
+        continue;
       }
-      else if (ds_status == 0b01) {
-        // to DS : 1
+      else if (ds_status == Dot11DS::TO_DS) {
         bssid = data_frame->receiver_addr;
         station = data_frame->transmitter_addr;
       }
-      else if (ds_status == 0b10) {
-        // from DS : 1
+      else if (ds_status == Dot11DS::FROM_DS) {
         bssid = data_frame->transmitter_addr;
         station = data_frame->receiver_addr;
       }
 
-      if (ap_list.count(bssid)) {
-        // already exist
-        ap_list[bssid].num_data += 1;
-        auto pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
-        if (pwr != 0)
-          ap_list[bssid].pwr = pwr;
-      }
-      else {
+      auto pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
+
+      if (ap_list.count(bssid) == 0) {
         // new AP
         AirodumpApInfo ap_info(bssid);
-        ap_info.num_data = 1;
-        auto pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
-        if (pwr != 0)
-          ap_info.pwr = pwr;
         
         // 채널 정보를 가져올 수 있는 TaggedParam이 없기 때문에 라디오탭 헤더에서 가져온다.
         int16_t channel_freq = *(int16_t*)radiotap->getField(PresentFlag::CHANNEL);
@@ -155,21 +171,53 @@ int main(int argc, char* argv[]) {
         else {
           ap_info.channel = (channel_freq - 2407) / 5;
         }
-
-        // 여기서 길이 구해서 Dot11wlanElement를 호출해서 정보를 가져와야겠다. 그리고 ap_info에 넣어주기.
         ap_list[bssid] = ap_info;
-        
-        // station이 broadcast일 때는 station_list에는 추가하지 않는다.
-        if (station != MacAddr::BROADCAST) {
-          AirodumpStationInfo station_info(station);
-          station_info.bssid = bssid;
-          station_info.pwr = pwr;
-          // station_info.rate
-          // station_info.lost
-          // station_info.frame
-          station_list[station] = station_info;
-        }
       }
+      ap_list[bssid].num_data += 1;
+      if (pwr != 0)
+        ap_list[bssid].pwr = pwr;
+
+      // station이 broadcast일 때는 station_list에는 추가하지 않는다.
+      if (station != MacAddr::BROADCAST) {
+        if (station_list.count(station) == 0) {
+          // new station
+          AirodumpStationInfo new_station_info(station);
+          station_list[station] = new_station_info;
+        }
+        AirodumpStationInfo& station_info = station_list[station];
+
+        if (pwr != 0)
+          station_info.pwr = pwr;
+
+        if (station_info.bssid != bssid) {
+          station_info.bssid = bssid;
+          station_info.seq_num = 0;
+          station_info.lost = 0;
+        }
+
+        // update losts : to ds 일 때만 seq_num을 갱신.
+        if (ds_status == Dot11DS::TO_DS) {
+          if (station_info.seq_num != 0) {
+            int losts = data_frame->seq_num - station_info.seq_num;
+            if (losts > 0)
+              station_info.lost += losts;
+          }
+          station_info.seq_num = data_frame->seq_num;
+        }
+
+        // set rate & qos
+        if (ds_status == Dot11DS::TO_DS) {
+          station_info.st_to_ap_rate = *(radiotap->getField(PresentFlag::RATE)) / 2;
+          station_info.st_to_ap_qos  = (data_frame->subtype & 0b1000) ? 'e' : ' ';
+        }
+        else if (ds_status == Dot11DS::FROM_DS) {
+          station_info.ap_to_st_rate = *(radiotap->getField(PresentFlag::RATE)) / 2;
+          station_info.ap_to_st_qos  = (data_frame->subtype & 0b1000) ? 'e' : ' ';
+        }
+        
+        station_info.frames += 1;
+      }
+      
     }
 
     container_lock.clear();

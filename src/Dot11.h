@@ -21,32 +21,23 @@ typedef struct _Dot11Frame {
 	}
 } Dot11Frame;
 
+
+typedef struct _Dot11MgtFrame: Dot11Frame {
+	// receiver_addr == destination_addr 
+	MacAddr transmitter_addr;   // == source addr == bssid
+	MacAddr bssid;
+	uint16_t frag_num: 4;
+	uint16_t seq_num : 12;
+} Dot11MgtFrame;
+
+
 typedef struct _Dot11DataFrame: Dot11Frame {
 	// receiver_addr == destination_addr == sta_addr
 	MacAddr transmitter_addr;  // == bssid
 	MacAddr addr3;
-	uint16_t frag_number: 4;
-	uint16_t seq_number : 12;
-	uint64_t ccmp_params;
-} Dot11DataFrame;
-
-typedef struct _Dot11QoSDataFrame: Dot11Frame {
-	// receiver_addr == destination_addr == sta_addr
-	MacAddr transmitter_addr;    // == bssid
-	MacAddr addr3;
-	uint16_t frag_number: 4;
-	uint16_t seq_number : 12;
-	uint16_t qos_ctrl;
-	uint64_t ccmp_params;
-} Dot11QoSFrame;
-
-typedef struct _Dot11BeaconFrame: Dot11Frame {
-	// receiver_addr == destination_addr 
-	MacAddr transmitter_addr;    // == addr3
-	MacAddr bssid;
 	uint16_t frag_num: 4;
 	uint16_t seq_num : 12;
-} Dot11BeaconFrame;
+} Dot11DataFrame;
 
 
 #pragma pack(pop)
@@ -77,6 +68,13 @@ namespace Dot11FC {
 	};
 };
 
+namespace Dot11DS {
+enum T {
+	TO_FROM_DS = 0b00,
+	TO_DS = 0b01,
+	FROM_DS = 0b10
+};
+};
 
 };
 #endif

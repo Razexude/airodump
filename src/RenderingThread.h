@@ -33,7 +33,7 @@ public:
             elapsed_seconds = now - start;
             cout << "\n CH  " << setw(2) << channel_list[ch_idx] << " ][ Elapsed: " << int(elapsed_seconds.count()) << " s ][ " << 
                     put_time(localtime(&now_tt), "%c");
-            printf("\n BSSID              PWR  Beacons    #Data, #/s  CH  MB   ENC  CIPHER AUTH ESSID\n\n");
+            printf("\n\n BSSID              PWR  Beacons    #Data, #/s  CH  MB   ENC  CIPHER AUTH ESSID\n\n");
 
             while (lock.test_and_set());  // spin
             for (auto ap_info = ap_list.begin(); ap_info != ap_list.end(); ++ap_info) {
@@ -45,7 +45,7 @@ public:
                 std::cout << station_info->second << std::endl;
             }
             
-            if (i > 6) {
+            if (i > 12) {
                 i = 0;
                 // channel hopping ; INT_NAME_MAX = 16
                 snprintf(channel_hopping_cmd, 39, "iw dev %s set channel %d", dev, channel_list[ch_idx]);
@@ -60,7 +60,7 @@ public:
             
             i++;
             lock.clear();
-            std::this_thread::sleep_for(std::chrono::milliseconds(100)); // 0.1sec.
+            std::this_thread::sleep_for(std::chrono::milliseconds(50)); // 0.05sec.
         }
     }
     

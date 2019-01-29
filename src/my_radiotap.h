@@ -6,7 +6,7 @@
 
 namespace wlan {
 
-const uint8_t PREAMBLE_MASK = 0b10;
+const uint16_t PREAMBLE_MASK = 0b100000;
 
 namespace PresentFlag {
 enum T {
