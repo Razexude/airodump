@@ -27,7 +27,7 @@ public:
     bool operator!=(const MacAddr& target) { return memcmp(this->addr, target.addr, LENGTH); }
     bool operator!=(const uint8_t* target) { return memcmp(this->addr, target, LENGTH); }
 
-    bool operator< (const MacAddr& target) const { return memcmp(this->addr, target.addr, LENGTH); }
+    bool operator< (const MacAddr& target) const { return (memcmp(this->addr, target.addr, LENGTH) < 0) ? true : false; }
 
     operator std::string() const { 
         char buf[18];

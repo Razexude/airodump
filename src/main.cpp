@@ -62,19 +62,22 @@ int main(int argc, char* argv[]) {
     int res = pcap_next_ex(handle, &header, &packet);
     if (res == 0) continue;
     if (res == -1 || res == -2) break;
-#if DEBUG
-    printf("%ld   : %u bytes captured\n", header->ts.tv_sec, header->caplen);
-#endif
+    // printf("%ld   : %u bytes captured\n", header->ts.tv_sec, header->caplen);
 
     while (container_lock.test_and_set());    // spin
 
     RadiotapHeader* radiotap = (RadiotapHeader*)packet;
     Dot11Frame* frame = (Dot11Frame*)(packet + radiotap->length);
-    if (frame->getTypeSubtype() == Dot11FC::TypeSubtype::BEACON) {
+    if ((frame->getTypeSubtype() == Dot11FC::TypeSubtype::BEACON)
+        || (frame->getTypeSubtype() == Dot11FC::TypeSubtype::PROBE_RESPONSE)) {
+      // parse beacon or probe response
       Dot11BeaconFrame* beacon_frame = (Dot11BeaconFrame*)frame;
-      
+#if DEBUG
+      std::cout << beacon_frame->bssid << std::endl;
+#endif
       if (ap_list.count(beacon_frame->bssid)) {
         // already exist
+        // printf("EXIST!! count %d\n", ap_list.count(beacon_frame->bssid));
         ap_list[beacon_frame->bssid].beacons += 1;
         auto pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
         if (pwr != 0)
@@ -82,6 +85,7 @@ int main(int argc, char* argv[]) {
       }
       else {
         // new AP
+        // printf("NEW!!\n");
         AirodumpApInfo ap_info(beacon_frame->bssid);
         ap_info.beacons = 1;
         auto pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
@@ -106,36 +110,36 @@ int main(int argc, char* argv[]) {
       }
     }
     else if (frame->type == Dot11FC::Type::DATA) {
+      // parse data
       Dot11DataFrame* data_frame = (Dot11DataFrame*)frame;
+      auto ds_status = data_frame->flags & 0b11;
+      MacAddr bssid;
+      MacAddr station;
+      if (ds_status == 0b00) {
+        // to ds from ds 둘 다 0일 때. receiver, transmitter 둘 다 station으로 추가해버림
+        // src에서 dst로 direct하게 보내는거라 AP 정보는 없음. (not associated)   
+        // airodump 예는 이럼. (not associated)   94:8B:C1:56:FC:E6  -38    0 - 1      0        2       
+      }
+      else if (ds_status == 0b01) {
+        // to DS : 1
+        bssid = data_frame->receiver_addr;
+        station = data_frame->transmitter_addr;
+      }
+      else if (ds_status == 0b10) {
+        // from DS : 1
+        bssid = data_frame->transmitter_addr;
+        station = data_frame->receiver_addr;
+      }
 
-      if (ap_list.count(data_frame->transmitter_addr)) {
+      if (ap_list.count(bssid)) {
         // already exist
-        ap_list[data_frame->transmitter_addr].num_data += 1;
+        ap_list[bssid].num_data += 1;
         auto pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
         if (pwr != 0)
-          ap_list[data_frame->transmitter_addr].pwr = pwr;
+          ap_list[bssid].pwr = pwr;
       }
       else {
         // new AP
-        auto ds_status = data_frame->flags & 0b11;
-        MacAddr bssid;
-        MacAddr station;
-        if (ds_status == 0b00) {
-          // to ds from ds 둘 다 0일 때. receiver, transmitter 둘 다 station으로 추가해버림
-          // src에서 dst로 direct하게 보내는거라 AP 정보는 없음. (not associated)   
-          // airodump 예는 이럼. (not associated)   94:8B:C1:56:FC:E6  -38    0 - 1      0        2       
-        }
-        else if (ds_status == 0b01) {
-          // to DS : 1
-          bssid = data_frame->receiver_addr;
-          station = data_frame->transmitter_addr;
-        }
-        else if (ds_status == 0b10) {
-          // from DS : 1
-          bssid = data_frame->transmitter_addr;
-          station = data_frame->receiver_addr;
-        }
-
         AirodumpApInfo ap_info(bssid);
         ap_info.num_data = 1;
         auto pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
@@ -143,7 +147,7 @@ int main(int argc, char* argv[]) {
           ap_info.pwr = pwr;
         
         // 채널 정보를 가져올 수 있는 TaggedParam이 없기 때문에 라디오탭 헤더에서 가져온다.
-        auto channel_freq = *(int16_t*)radiotap->getField(PresentFlag::CHANNEL);
+        int16_t channel_freq = *(int16_t*)radiotap->getField(PresentFlag::CHANNEL);
         if (channel_freq == 2484) {
           // channel 14만 frequency에서 공식으로 구할 수가 없다.
           ap_info.channel = 14;
