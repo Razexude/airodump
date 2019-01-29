@@ -12,6 +12,7 @@
 class MacAddr final {
 public:
     static const size_t LENGTH = 6;
+    static const uint8_t BROADCAST[LENGTH];
 private:
     uint8_t addr[LENGTH];
 

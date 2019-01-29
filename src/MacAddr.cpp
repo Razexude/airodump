@@ -1,0 +1,4 @@
+
+#include "MacAddr.h"
+
+const uint8_t MacAddr::BROADCAST[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
