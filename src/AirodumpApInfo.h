@@ -4,11 +4,13 @@
 #include <iomanip>
 #include <iostream>
 
+#include <chrono>
 #include <cstdint>
 #include <string>
 
 #include "MacAddr.h"
 
+using namespace std::chrono;
 
 namespace wlan {
 const uint16_t STD_OPN = 0x0001;
@@ -46,10 +48,14 @@ public:
   unsigned int auth = 0;
   std::string essid;
 
-public:
-  AirodumpApInfo() {}
-  AirodumpApInfo(MacAddr _bssid): bssid(_bssid) {}
+  unsigned int last_num_data { num_data };
+  system_clock::time_point update_time = std::chrono::system_clock::now();
 
+public:
+  AirodumpApInfo() { }
+  AirodumpApInfo(MacAddr _bssid): bssid(_bssid) { }
+
+  void updateDataPerSec();
   void parseTaggedParam(uint8_t* it, const uint8_t* packet_end);
 
   friend std::ostream& operator<<(std::ostream& os, AirodumpApInfo& obj) {

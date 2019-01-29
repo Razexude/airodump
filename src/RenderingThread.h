@@ -8,7 +8,7 @@
 
 using namespace wlan;
 using namespace std;
-using namespace chrono;
+using namespace std::chrono;
 
 class RenderingThread {
 public:
@@ -37,11 +37,22 @@ public:
 
             while (lock.test_and_set());  // spin
             for (auto ap_info = ap_list.begin(); ap_info != ap_list.end(); ++ap_info) {
+                duration<double> elapse = now - ap_info->second.update_time;
+                if (int(elapse.count()) > 10) {
+                    ap_info->second.updateDataPerSec();
+                    ap_info->second.update_time = now;
+                }
                 std::cout << ap_info->second << std::endl;
             }
             
             printf("\n BSSID              STATION            PWR   Rate    Lost    Frames  Probe     \n\n");
             for (auto station_info = station_list.begin(); station_info != station_list.end(); ++station_info) {
+                duration<double> elapse = now - station_info->second.clear_time;
+                if (int(elapse.count()) > 10) {
+                    station_info->second.clearLost();
+                    station_info->second.clear_time = now;
+                }
+
                 std::cout << station_info->second << std::endl;
             }
             

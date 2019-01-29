@@ -90,3 +90,8 @@ void AirodumpApInfo::parseTaggedParam(uint8_t* it, const uint8_t* packet_end) {
         it += 2 + len;    // tag num 1byte + tag len 1byte
     }
 }
+
+void AirodumpApInfo::updateDataPerSec() {
+    this->num_data_per_sec = this->num_data - this->last_num_data;
+    this->last_num_data = this->num_data;
+}

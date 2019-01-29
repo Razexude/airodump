@@ -21,3 +21,7 @@ void AirodumpStationInfo::parseTaggedParam(uint8_t* it, const uint8_t* packet_en
         it += 2 + len;    // tag num 1byte + tag len 1byte
     }
 }
+
+void AirodumpStationInfo::clearLost() {
+    this->lost = 0;
+}

@@ -2,8 +2,11 @@
 #define AIRODUMPSTATIONINFO_H
 
 #include <set>
+#include <chrono>
 
 #include "MacAddr.h"
+
+using namespace std::chrono;
 
 class AirodumpStationInfo {
 public:
@@ -18,10 +21,12 @@ public:
     unsigned int frames = 0;
     unsigned int seq_num = 0;
     std::set<std::string>  probe;
+    system_clock::time_point clear_time = system_clock::now();
     
     AirodumpStationInfo() {}
     AirodumpStationInfo(MacAddr _station): station(_station) {}
 
+    void clearLost();
     void parseTaggedParam(uint8_t* it, const uint8_t* packet_end);
 
     friend std::ostream& operator<<(std::ostream& os, AirodumpStationInfo& obj) {
