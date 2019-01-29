@@ -46,7 +46,6 @@ struct _radiotap_size_info {
 	uint8_t size;
 };
 
-
 #pragma pack(push, 1)
 typedef struct _RadiotapHeader {
 public:
