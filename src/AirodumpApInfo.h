@@ -1,5 +1,5 @@
-#ifndef AIRODUMPLINE_H
-#define AIRODUMPLINE_H
+#ifndef AIRODUMPAPINFO_H
+#define AIRODUMPAPINFO_H
 
 #include <iomanip>
 #include <iostream>
@@ -33,17 +33,17 @@ const uint16_t AUTH_MGT = 0x0800;
 class AirodumpApInfo {
 public:
   MacAddr bssid;
-  int          pwr = 0;
+  int          pwr = -1;
   unsigned int beacons = 0;
   unsigned int num_data = 0;
   unsigned int num_data_per_sec = 0;
   unsigned int channel = 0;
-  unsigned int max_speed = 0;
+  int          max_speed = -1;
   char         qos = ' ';
   char         preamble = ' ';
-  unsigned int enc;
-  unsigned int cipher;
-  unsigned int auth;
+  unsigned int enc = 0;
+  unsigned int cipher = 0;
+  unsigned int auth = 0;
   std::string essid;
 
 public:
