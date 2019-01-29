@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
@@ -17,7 +18,7 @@
 #include "Dot11.h"
 #include "Dot11FrameBody.h"
 #include "AirodumpApInfo.h"
-#include "util.h"
+#include "AirodumpStationInfo.h"
 #include "RenderingThread.h"
 
 #define DEBUG 0
@@ -31,8 +32,9 @@ void usage(char *fname) {
 }
 
 std::map<MacAddr, AirodumpApInfo> ap_list;
-std::atomic_flag ap_list_lock = ATOMIC_FLAG_INIT;    // spin lock
-// std::map<MacAddr, AirodumpStationInfo> station_list;
+std::map<MacAddr, AirodumpStationInfo> station_list;
+std::atomic_flag container_lock = ATOMIC_FLAG_INIT;    // spin lock
+
 
 int main(int argc, char* argv[]) {
   if (argc != 2) {
@@ -50,7 +52,8 @@ int main(int argc, char* argv[]) {
 
 #if !DEBUG
   RenderingThread _rendering_thread;
-  std::thread rendering_thread( [&] { _rendering_thread.threadMain(ap_list, ap_list_lock); } );
+  std::thread rendering_thread( [&] { _rendering_thread.threadMain(
+              ap_list, station_list, container_lock, dev); } );
 #endif
 
   while (true) {
@@ -63,7 +66,7 @@ int main(int argc, char* argv[]) {
     printf("%ld   : %u bytes captured\n", header->ts.tv_sec, header->caplen);
 #endif
 
-    while (ap_list_lock.test_and_set());    // spin
+    while (container_lock.test_and_set());    // spin
 
     RadiotapHeader* radiotap = (RadiotapHeader*)packet;
     Dot11Frame* frame = (Dot11Frame*)(packet + radiotap->length);
@@ -95,7 +98,7 @@ int main(int argc, char* argv[]) {
         else {
             ap_info.enc |= STD_OPN;
         }
-        
+
         // parse 802.11 Tagged Parameter
         uint8_t* it = (uint8_t*)((uintptr_t)beacon_frame + sizeof(Dot11BeaconFrame) + sizeof(Dot11FrameBody));
         ap_info.parseTaggedParam(it, packet + header->caplen);
@@ -104,6 +107,7 @@ int main(int argc, char* argv[]) {
     }
     else if (frame->type == Dot11FC::Type::DATA) {
       Dot11DataFrame* data_frame = (Dot11DataFrame*)frame;
+
       if (ap_list.count(data_frame->transmitter_addr)) {
         // already exist
         ap_list[data_frame->transmitter_addr].num_data += 1;
@@ -113,19 +117,58 @@ int main(int argc, char* argv[]) {
       }
       else {
         // new AP
+        auto ds_status = data_frame->flags & 0b11;
+        MacAddr bssid;
+        MacAddr station;
+        if (ds_status == 0b00) {
+          // to ds from ds 둘 다 0일 때. receiver, transmitter 둘 다 station으로 추가해버림
+          // src에서 dst로 direct하게 보내는거라 AP 정보는 없음. (not associated)   
+          // airodump 예는 이럼. (not associated)   94:8B:C1:56:FC:E6  -38    0 - 1      0        2       
+        }
+        else if (ds_status == 0b01) {
+          // to DS : 1
+          bssid = data_frame->receiver_addr;
+          station = data_frame->transmitter_addr;
+        }
+        else if (ds_status == 0b10) {
+          // from DS : 1
+          bssid = data_frame->transmitter_addr;
+          station = data_frame->receiver_addr;
+        }
 
-        // TODO : 여기서 추가할 때 to ds from ds 따져서 bssid 위치 제대로 인식해야돼!! 그리고 채널 가져오는건, 여기선 라디오탭헤더 써야함
-        AirodumpApInfo ap_info(data_frame->transmitter_addr);
+        AirodumpApInfo ap_info(bssid);
         ap_info.num_data = 1;
         auto pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
         if (pwr != 0)
           ap_info.pwr = pwr;
+        
+        // 채널 정보를 가져올 수 있는 TaggedParam이 없기 때문에 라디오탭 헤더에서 가져온다.
+        auto channel_freq = *(int16_t*)radiotap->getField(PresentFlag::CHANNEL);
+        if (channel_freq == 2484) {
+          // channel 14만 frequency에서 공식으로 구할 수가 없다.
+          ap_info.channel = 14;
+        }
+        else {
+          ap_info.channel = (channel_freq - 2407) / 5;
+        }
+
         // 여기서 길이 구해서 Dot11wlanElement를 호출해서 정보를 가져와야겠다. 그리고 ap_info에 넣어주기.
-        ap_list[data_frame->transmitter_addr] = ap_info;
+        ap_list[bssid] = ap_info;
+        
+        // station이 broadcast일 때는 station_list에는 추가하지 않는다.
+        if (station != MacAddr::BROADCAST) {
+          AirodumpStationInfo station_info(station);
+          station_info.bssid = bssid;
+          station_info.pwr = pwr;
+          // station_info.rate
+          // station_info.lost
+          // station_info.frame
+          station_list[station] = station_info;
+        }
       }
     }
 
-    ap_list_lock.clear();
+    container_lock.clear();
     
   }
 
@@ -133,8 +176,7 @@ int main(int argc, char* argv[]) {
   return 0;
 }
 
-
-// 암호화는 dot11 header에서 flag protected ==1 이고 ccmpㅣ면wpa
-// WEP는 radiotap header의 flag에 항목이 있는 것 같다.
 // RXQ는 sequence number를 봐서 비율을 따지면 되겠고.
+
+
 
