@@ -10,16 +10,16 @@ using namespace std::chrono;
 
 class AirodumpStationInfo {
 public:
-    MacAddr      bssid;
-    MacAddr      station;
-    int          pwr  = 0;
-    unsigned int ap_to_st_rate = 0;
-    unsigned int st_to_ap_rate = 0;
-    char         ap_to_st_qos  = ' ';
-    char         st_to_ap_qos  = ' ';
-    unsigned int lost = 0;
-    unsigned int frames = 0;
-    unsigned int seq_num = 0;
+    MacAddr bssid;
+    MacAddr station;
+    int  pwr  = 0;
+    uint ap_to_st_rate = 0;
+    uint st_to_ap_rate = 0;
+    char ap_to_st_qos  = ' ';
+    char st_to_ap_qos  = ' ';
+    uint lost = 0;
+    uint frames = 0;
+    uint seq_num = 0;
     std::set<std::string>  probe;
     system_clock::time_point clear_time = system_clock::now();
     

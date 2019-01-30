@@ -1,6 +1,6 @@
 
 #include "AirodumpApInfo.h"
-#include "Dot11FrameBody.h"
+#include "Dot11TaggedParam.h"
 
 using namespace wlan;
 
@@ -10,17 +10,21 @@ void AirodumpApInfo::parseTaggedParam(uint8_t* it, const uint8_t* packet_end) {
     // 그리고 어떤Tag에 대한 파싱을 각각의 구조체가 아니라, 구조체는 TaggedParam 공통 하나만 만들고 한 Tag당 하나의 parser메서드를 만들어서 이를 호출하는 형태로 하면 좋을듯. 그러려면 &ap_info를 인자로 받아야겠군.
     while (it < packet_end)  {
         // it[0] = Tag num    it[1] = Tag len    it[2~] = Tag data
-        auto tag = it[0];
-        auto len = it[1];
-        auto data = it + 2;
+        Dot11TaggedParam* t = (Dot11TaggedParam*)it; 
+        auto tag = t->num;
+        auto len = t->len;
+        auto data = &(t->data);
+        
         
         if (tag == Dot11TagNum::DSPARMS) {
-            this->channel = *data;
+            this->channel = t->getChannel();
         }
         else if (tag == Dot11TagNum::RATES || tag == Dot11TagNum::XRATES) {
-            auto _speed = *(data + len - 1); // 현재 Tag의 마지막 데이터
-            auto speed = (_speed & 0x7F) / 2;
+            auto speed = t->getSpeed();
             this->max_speed = (this->max_speed < speed) ? speed : this->max_speed;
+        }
+        else if (tag == Dot11TagNum::SSID) {
+            this->essid = t->getSsid();
         }
         else if (tag == Dot11TagNum::VENDOR &&
             (len >= 8) && (memcmp(data, MS_SPECIFIC_QOS, 6) == 0)) {
@@ -82,10 +86,6 @@ void AirodumpApInfo::parseTaggedParam(uint8_t* it, const uint8_t* packet_end) {
                 }
             }
         }
-        else if (tag == Dot11TagNum::SSID) {
-            this->essid = std::string(data, data + len);
-        }
-
 
         it += 2 + len;    // tag num 1byte + tag len 1byte
     }

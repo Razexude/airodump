@@ -3,22 +3,20 @@
 #include <string>
 
 #include "AirodumpStationInfo.h"
-#include "Dot11FrameBody.h"
+#include "Dot11TaggedParam.h"
 
 using namespace wlan;
 
 void AirodumpStationInfo::parseTaggedParam(uint8_t* it, const uint8_t* packet_end) {
     while (it < packet_end) {
-        auto tag = it[0];
-        auto len = it[1];
-        auto data = it + 2;
+        Dot11TaggedParam* t = (Dot11TaggedParam*)it; 
 
-        if (tag == Dot11TagNum::SSID && len != 0) {
-            this->probe.insert(std::string(data, data + len));
+        if (t->num == Dot11TagNum::SSID && t->len != 0) {
+            this->probe.insert(std::string(&(t->data), &(t->data) + t->len));
             // std::cout << "SSID : " << std::string(data, data + len) << std::endl;
         }
 
-        it += 2 + len;    // tag num 1byte + tag len 1byte
+        it += 2 + t->len;    // tag num 1byte + tag len 1byte
     }
 }
 

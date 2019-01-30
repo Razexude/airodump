@@ -1,9 +1,10 @@
-#ifndef DOT11FRAMEBODY_H
-#define DOT11FRAMEBODY_H
+#ifndef DOT11TAGGEDPARAM_H
+#define DOT11TAGGEDPARAM_H
 
 #include <cstdint>
 #include <cstddef>
 #include <utility>
+#include <string>
 
 
 namespace wlan {
@@ -51,27 +52,33 @@ enum T {
 }
 #pragma pack(push, 1)
 
-typedef struct _Dot11FrameBody {
-	uint64_t timestamp;      // fixed param
-	uint16_t beacon_interval;
-	uint16_t capabilities_info;
 
-	std::pair<uint8_t*, uint8_t> getTaggedParam(Dot11TagNum::T tag, uint8_t* packet_end) {
-        uint8_t* offset = (uint8_t*)this;
-        offset += sizeof(struct _Dot11FrameBody);    // add fixed fields size
-        while (*offset != tag && offset < packet_end) {
-            offset += *(offset + 1);  // *(offset + 1) tag field length
-            offset += 2;    // tag num field 1byte, tag len field 1byte
-        }
+typedef struct _Dot11TaggedParam {
+	uint8_t num;
+	uint8_t len;
+	uint8_t data;
 
-        if (offset >= packet_end) {
-			printf("NULL!!!\n");
-            return std::pair<uint8_t*, uint8_t>(NULL, NULL);
-        }
+	uint8_t getChannel() { return data; }
+	uint8_t getSpeed() {
+		uint8_t speed = *(&data + len - 1); // 현재 Tag의 마지막 데이터
+		return (speed & 0x7F) / 2;
+	}
+	std::string getSsid() { return std::string(&data, &data + len); }
 
-        return std::pair<uint8_t*, uint8_t>((offset + 2), *(offset + 1));  // tag data의 시작지점 offset과, length.
-    };
-} Dot11FrameBody;
+
+	// TODO : operator overloading해서 iter처럼 쓰면 좋겠다.
+	// 상속을 받자니 offset이 틀어질거같고. 어쩐다? std::vector<int>::iterator 이거 따라가보면, 어쨌든 iterator도 내부에 current 변수가 있어야 하긴 함.
+	// struct _TaggedParam& operator++() {
+		
+	// 	this += 2 + this->len;
+	// 	return *this;
+	// }
+	// struct _TaggedParam  operator++(int) {
+
+	// 	T temp = *this ;
+	// 	return temp ;
+	// }
+} Dot11TaggedParam;
 
 #pragma pack(pop)
 

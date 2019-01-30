@@ -35,20 +35,20 @@ const uint16_t AUTH_MGT = 0x0800;
 class AirodumpApInfo {
 public:
   MacAddr bssid;
-  int          pwr = -1;
-  unsigned int beacons = 0;
-  unsigned int num_data = 0;
-  unsigned int num_data_per_sec = 0;
-  unsigned int channel = 0;
-  int          max_speed = -1;
-  char         qos = ' ';
-  char         preamble = ' ';
-  unsigned int enc = 0;
-  unsigned int cipher = 0;
-  unsigned int auth = 0;
+  int  pwr = -1;
+  uint beacons = 0;
+  uint num_data = 0;
+  uint num_data_per_sec = 0;
+  uint channel = 0;
+  int  max_speed = -1;
+  char qos = ' ';
+  char preamble = ' ';
+  uint enc = 0;
+  uint cipher = 0;
+  uint auth = 0;
   std::string essid;
 
-  unsigned int last_num_data { num_data };
+  uint last_num_data { num_data };
   system_clock::time_point update_time = std::chrono::system_clock::now();
 
 public:

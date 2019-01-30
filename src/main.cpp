@@ -16,7 +16,7 @@
 #include "MacAddr.h"
 #include "my_radiotap.h" 
 #include "Dot11.h"
-#include "Dot11FrameBody.h"
+#include "Dot11TaggedParam.h"
 #include "AirodumpApInfo.h"
 #include "AirodumpStationInfo.h"
 #include "RenderingThread.h"
@@ -69,18 +69,18 @@ int main(int argc, char* argv[]) {
     if (frame->type == Dot11FC::Type::CTRL) {
       continue;    // not interested
     }
+    auto pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
 
     while (container_lock.test_and_set());    // spin
 
     if ((frame->getTypeSubtype() == Dot11FC::TypeSubtype::BEACON)
         || (frame->getTypeSubtype() == Dot11FC::TypeSubtype::PROBE_RESPONSE)) {
       // parse beacon or probe response
-      Dot11MgtFrame* beacon_frame = (Dot11MgtFrame*)frame;
+      Dot11BeaconFrame* beacon_frame = (Dot11BeaconFrame*)frame;
 #if DEBUG
       std::cout << beacon_frame->bssid << std::endl;
 #endif
 
-      auto pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
       if (ap_list.count(beacon_frame->bssid) == 0) {
         // new AP
         AirodumpApInfo new_ap_info(beacon_frame->bssid);
@@ -92,17 +92,16 @@ int main(int argc, char* argv[]) {
       ap_info.pwr = (pwr != 0) ? pwr : ap_info.pwr;
 
       // parse Fixed Parameter
-      Dot11FrameBody* frame_body = (Dot11FrameBody*)((uintptr_t)beacon_frame + sizeof(Dot11MgtFrame));
-      if (frame_body->capabilities_info & CAPABILITY_WEP) {
+      if (beacon_frame->capabilities_info & CAPABILITY_WEP) {
         ap_info.enc |= STD_WEP;
         ap_info.cipher |= ENC_WEP;
       }
       else {
         ap_info.enc |= STD_OPN;
       }
-      ap_info.preamble = (frame_body->capabilities_info & PREAMBLE_MASK) ? '.' : ' ';
+      ap_info.preamble = (beacon_frame->capabilities_info & PREAMBLE_MASK) ? '.' : ' ';
       // parse 802.11 Tagged Parameter
-      uint8_t* it = (uint8_t*)((uintptr_t)beacon_frame + sizeof(Dot11MgtFrame) + sizeof(Dot11FrameBody));
+      uint8_t* it = (uint8_t*)((uintptr_t)beacon_frame + sizeof(Dot11BeaconFrame));
       ap_info.parseTaggedParam(it, packet + header->caplen);
 
     }
@@ -141,11 +140,8 @@ int main(int argc, char* argv[]) {
       MacAddr bssid;
       MacAddr station;
       if (ds_status == Dot11DS::TO_FROM_DS) {
-        // to ds from ds 둘 다 0일 때. receiver, transmitter 둘 다 station으로 추가해버림
-        // src에서 dst로 direct하게 보내는거라 AP 정보는 없음. (not associated)   
-        // airodump 예는 이럼. (not associated)   94:8B:C1:56:FC:E6  -38    0 - 1      0        2       
-        container_lock.clear();
-        continue;
+        // data 이면서 ds가 00인 패킷은 안잡히는 듯.
+        goto while_end;
       }
       else if (ds_status == Dot11DS::TO_DS) {
         bssid = data_frame->receiver_addr;
@@ -155,8 +151,6 @@ int main(int argc, char* argv[]) {
         bssid = data_frame->transmitter_addr;
         station = data_frame->receiver_addr;
       }
-
-      auto pwr = *(int8_t*)radiotap->getField(PresentFlag::DBM_ANTSIGNAL);
 
       if (ap_list.count(bssid) == 0) {
         // new AP
@@ -220,6 +214,7 @@ int main(int argc, char* argv[]) {
       
     }
 
+while_end:
     container_lock.clear();
     
   }

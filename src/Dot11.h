@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "MacAddr.h"
+#include "Dot11TaggedParam.h"
 
 namespace wlan {
 
@@ -29,6 +30,29 @@ typedef struct _Dot11MgtFrame: Dot11Frame {
 	uint16_t frag_num: 4;
 	uint16_t seq_num : 12;
 } Dot11MgtFrame;
+
+typedef struct _Dot11BeaconFrame: Dot11MgtFrame {
+	// fixed parameter
+	uint64_t timestamp;      
+	uint16_t beacon_interval;
+	uint16_t capabilities_info;
+
+	std::pair<uint8_t*, uint8_t> getTaggedParam(Dot11TagNum::T tag, uint8_t* packet_end) {
+        uint8_t* offset = (uint8_t*)this;
+        offset += sizeof(struct _Dot11BeaconFrame);    // add fixed fields size
+        while (*offset != tag && offset < packet_end) {
+            offset += *(offset + 1);  // *(offset + 1) tag field length
+            offset += 2;    // tag num field 1byte, tag len field 1byte
+        }
+
+        if (offset >= packet_end) {
+			// printf("NULL!!!\n");
+            return std::pair<uint8_t*, uint8_t>(NULL, NULL);
+        }
+
+        return std::pair<uint8_t*, uint8_t>((offset + 2), *(offset + 1));  // tag data의 시작지점 offset과, length.
+    };
+} Dot11BeaconFrame;
 
 
 typedef struct _Dot11DataFrame: Dot11Frame {
