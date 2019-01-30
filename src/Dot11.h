@@ -29,11 +29,12 @@ typedef struct _Dot11MgtFrame: Dot11Frame {
 	MacAddr bssid;
 	uint16_t frag_num: 4;
 	uint16_t seq_num : 12;
+
 } Dot11MgtFrame;
 
 typedef struct _Dot11BeaconFrame: Dot11MgtFrame {
 	// fixed parameter
-	uint64_t timestamp;      
+	uint64_t timestamp;
 	uint16_t beacon_interval;
 	uint16_t capabilities_info;
 
@@ -53,6 +54,17 @@ typedef struct _Dot11BeaconFrame: Dot11MgtFrame {
         return std::pair<uint8_t*, uint8_t>((offset + 2), *(offset + 1));  // tag data의 시작지점 offset과, length.
     };
 } Dot11BeaconFrame;
+
+typedef struct _Dot11AssoReqFrame: Dot11MgtFrame {
+	uint16_t capabilities_info;
+	uint16_t listen_interval;
+} Dot11AssoReqFrame;
+
+typedef struct _Dot11AssoResponFrame: Dot11MgtFrame {
+	uint16_t capabilities_info;
+	uint16_t status_code;
+	uint16_t asso_id;
+} Dot11AssoResponFrame;
 
 
 typedef struct _Dot11DataFrame: Dot11Frame {
@@ -78,16 +90,12 @@ namespace Dot11FC {
 
 	namespace TypeSubtype {
 	enum : uint8_t {
+		ASSO_REQ = 0x00,
+		ASSO_RESPON = 0x01,
 		PROBE_REQUEST  = 0x04,
 		PROBE_RESPONSE = 0x05,
 		BEACON         = 0x08,
-		BLOCK_ACK_REQ = 0x18,
-		BLOCK_ACK     = 0x19,
-		CLEAR_TO_SEND = 0x1c,
-		ACK = 0x1d,
-		DATA = 0x20,
-		NULL_DATA = 0x24,
-		QOS_DATA = 0x28
+		AUTH           = 0x0b
 	};
 	};
 };

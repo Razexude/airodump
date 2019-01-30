@@ -133,6 +133,79 @@ int main(int argc, char* argv[]) {
       station_info.frames += 1;
       
     }
+    else if (frame->getTypeSubtype() == Dot11FC::TypeSubtype::ASSO_REQ) {
+      Dot11AssoReqFrame* asso_req_frame = (Dot11AssoReqFrame*)frame;
+      MacAddr bssid = asso_req_frame->receiver_addr;
+      MacAddr station = asso_req_frame->transmitter_addr;
+      if (station_list.count(station) == 0) {
+        // new station
+        AirodumpStationInfo new_station_info(station);
+        new_station_info.bssid = bssid;
+        station_list[station] = new_station_info;
+      }
+
+      if (ap_list.count(bssid) == 0) {
+        // new AP
+        AirodumpApInfo ap_info(bssid);
+        
+        int16_t channel_freq = *(int16_t*)radiotap->getField(PresentFlag::CHANNEL);
+        if (channel_freq == 2484) {
+          ap_info.channel = 14;
+        }
+        else {
+          ap_info.channel = (channel_freq - 2407) / 5;
+        }
+        uint8_t* it = (uint8_t*)((uintptr_t)asso_req_frame + sizeof(Dot11AssoReqFrame));
+        ap_info.parseTaggedParam(it, packet + header->caplen);
+        ap_list[bssid] = ap_info;
+      }
+    }
+    else if (frame->getTypeSubtype() == Dot11FC::TypeSubtype::ASSO_RESPON) {
+      Dot11AssoResponFrame* asso_respon_frame = (Dot11AssoResponFrame*)frame;
+      MacAddr bssid = asso_respon_frame->bssid;
+      if (ap_list.count(bssid) == 0) {
+        // new AP
+        AirodumpApInfo ap_info(bssid);
+        
+        int16_t channel_freq = *(int16_t*)radiotap->getField(PresentFlag::CHANNEL);
+        if (channel_freq == 2484) {
+          ap_info.channel = 14;
+        }
+        else {
+          ap_info.channel = (channel_freq - 2407) / 5;
+        }
+        uint8_t* it = (uint8_t*)((uintptr_t)asso_respon_frame + sizeof(Dot11AssoReqFrame));
+        ap_info.parseTaggedParam(it, packet + header->caplen);
+        ap_list[bssid] = ap_info;
+      }
+    }
+    else if (frame->getTypeSubtype() == Dot11FC::TypeSubtype::AUTH) {
+      Dot11MgtFrame* auth_frame = (Dot11MgtFrame*)frame;
+      MacAddr bssid = auth_frame->bssid;
+      if (ap_list.count(bssid) == 0) {
+        // new AP
+        AirodumpApInfo ap_info(bssid);
+        
+        int16_t channel_freq = *(int16_t*)radiotap->getField(PresentFlag::CHANNEL);
+        if (channel_freq == 2484) {
+          ap_info.channel = 14;
+        }
+        else {
+          ap_info.channel = (channel_freq - 2407) / 5;
+        }
+        ap_list[bssid] = ap_info;
+      }
+
+      if (auth_frame->bssid != auth_frame->transmitter_addr) {
+        MacAddr station = auth_frame->transmitter_addr;
+        if (station_list.count(station) == 0) {
+          // new station
+          AirodumpStationInfo new_station_info(station);
+          new_station_info.bssid = bssid;
+          station_list[station] = new_station_info;
+        }
+      }
+    }
     else if (frame->type == Dot11FC::Type::DATA) {
       // parse data
       Dot11DataFrame* data_frame = (Dot11DataFrame*)frame;
