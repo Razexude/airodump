@@ -133,9 +133,10 @@ int main(int argc, char* argv[]) {
       station_info.frames += 1;
       
     }
-    else if (frame->getTypeSubtype() == Dot11FC::TypeSubtype::ASSO_REQ) {
+    else if (frame->getTypeSubtype() == Dot11FC::TypeSubtype::ASSO_REQ || 
+             frame->getTypeSubtype() == Dot11FC::TypeSubtype::REASSO_REQ) {
       Dot11AssoReqFrame* asso_req_frame = (Dot11AssoReqFrame*)frame;
-      MacAddr bssid = asso_req_frame->receiver_addr;
+      MacAddr bssid = asso_req_frame->bssid;
       MacAddr station = asso_req_frame->transmitter_addr;
       if (station_list.count(station) == 0) {
         // new station
@@ -155,12 +156,19 @@ int main(int argc, char* argv[]) {
         else {
           ap_info.channel = (channel_freq - 2407) / 5;
         }
-        uint8_t* it = (uint8_t*)((uintptr_t)asso_req_frame + sizeof(Dot11AssoReqFrame));
+        uint8_t* it;
+        if (frame->getTypeSubtype() == Dot11FC::TypeSubtype::REASSO_REQ)
+          it = (uint8_t*)((uintptr_t)asso_req_frame + sizeof(Dot11ReAssoReqFrame));
+        else
+          it = (uint8_t*)((uintptr_t)asso_req_frame + sizeof(Dot11AssoReqFrame));
+
         ap_info.parseTaggedParam(it, packet + header->caplen);
         ap_list[bssid] = ap_info;
       }
     }
-    else if (frame->getTypeSubtype() == Dot11FC::TypeSubtype::ASSO_RESPON) {
+  
+    else if (frame->getTypeSubtype() == Dot11FC::TypeSubtype::ASSO_RESPON ||
+             frame->getTypeSubtype() == Dot11FC::TypeSubtype::REASSO_RESPON) {
       Dot11AssoResponFrame* asso_respon_frame = (Dot11AssoResponFrame*)frame;
       MacAddr bssid = asso_respon_frame->bssid;
       if (ap_list.count(bssid) == 0) {
@@ -179,7 +187,9 @@ int main(int argc, char* argv[]) {
         ap_list[bssid] = ap_info;
       }
     }
-    else if (frame->getTypeSubtype() == Dot11FC::TypeSubtype::AUTH) {
+    else if (frame->getTypeSubtype() == Dot11FC::TypeSubtype::AUTH ||
+             frame->getTypeSubtype() == Dot11FC::TypeSubtype::DEASSO ||
+             frame->getTypeSubtype() == Dot11FC::TypeSubtype::DEAUTH) {
       Dot11MgtFrame* auth_frame = (Dot11MgtFrame*)frame;
       MacAddr bssid = auth_frame->bssid;
       if (ap_list.count(bssid) == 0) {

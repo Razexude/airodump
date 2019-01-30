@@ -66,6 +66,10 @@ typedef struct _Dot11AssoResponFrame: Dot11MgtFrame {
 	uint16_t asso_id;
 } Dot11AssoResponFrame;
 
+typedef struct _Dot11ReAssoReqFrame: Dot11AssoReqFrame {
+	MacAddr current_ap;
+} Dot11ReAssoReqFrame;
+
 
 typedef struct _Dot11DataFrame: Dot11Frame {
 	// receiver_addr == destination_addr == sta_addr
@@ -90,12 +94,16 @@ namespace Dot11FC {
 
 	namespace TypeSubtype {
 	enum : uint8_t {
-		ASSO_REQ = 0x00,
-		ASSO_RESPON = 0x01,
+		ASSO_REQ       = 0x00,
+		ASSO_RESPON    = 0x01,
+		REASSO_REQ     = 0x02,
+		REASSO_RESPON  = 0x03,
 		PROBE_REQUEST  = 0x04,
 		PROBE_RESPONSE = 0x05,
 		BEACON         = 0x08,
-		AUTH           = 0x0b
+		DEASSO  	   = 0x0a,
+		AUTH           = 0x0b,
+		DEAUTH   	   = 0x0c
 	};
 	};
 };
